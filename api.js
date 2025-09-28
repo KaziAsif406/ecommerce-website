@@ -1,206 +1,228 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
-
-// API Helper Functions
+// Frontend-only API stub for localStorage and local data
 class BookStoreAPI {
   constructor() {
-    this.token = localStorage.getItem('bookstore_token');
+    this.token = null;
+    this.user = JSON.parse(localStorage.getItem('bookstore_user')) || null;
   }
 
-  // Set authentication token
   setToken(token) {
     this.token = token;
     localStorage.setItem('bookstore_token', token);
   }
 
-  // Clear authentication token
   clearToken() {
     this.token = null;
     localStorage.removeItem('bookstore_token');
+    localStorage.removeItem('bookstore_user');
   }
 
-  // Make API request
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.token && { Authorization: `Bearer ${this.token}` })
-      },
-      ...options
-    };
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'API request failed');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('API request error:', error);
-      throw error;
-    }
-  }
-
-  // Authentication API
+  // Simulate registration
   async register(userData) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
+    this.user = {
+      name: userData.fullName || userData.name,
+      email: userData.email,
+      password: userData.password
+    };
+    localStorage.setItem('bookstore_user', JSON.stringify(this.user));
+    return { user: this.user };
   }
 
+  // Simulate login
   async login(credentials) {
-    const response = await this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials)
-    });
-    
-    if (response.token) {
-      this.setToken(response.token);
+    const user = JSON.parse(localStorage.getItem('bookstore_user'));
+    if (user && user.email === credentials.email && user.password === credentials.password) {
+      this.user = user;
+      return { user };
+    } else {
+      throw new Error('Invalid email or password');
     }
-    
-    return response;
   }
 
   async getCurrentUser() {
-    return this.request('/auth/me');
+    const user = JSON.parse(localStorage.getItem('bookstore_user'));
+    if (user) {
+      return { user };
+    } else {
+      throw new Error('Not authenticated');
+    }
   }
 
   async updateProfile(profileData) {
-    return this.request('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData)
-    });
+    let user = JSON.parse(localStorage.getItem('bookstore_user'));
+    if (user) {
+      user = { ...user, ...profileData };
+      localStorage.setItem('bookstore_user', JSON.stringify(user));
+      this.user = user;
+      return { user };
+    } else {
+      throw new Error('Not authenticated');
+    }
   }
 
   async changePassword(passwordData) {
-    return this.request('/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify(passwordData)
-    });
+    let user = JSON.parse(localStorage.getItem('bookstore_user'));
+    if (user && passwordData.oldPassword === user.password) {
+      user.password = passwordData.newPassword;
+      localStorage.setItem('bookstore_user', JSON.stringify(user));
+      this.user = user;
+      return { user };
+    } else {
+      throw new Error('Incorrect old password');
+    }
   }
 
-  // Books API
+  // Books API - frontend only, so return nothing
   async getBooks(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/books?${queryString}`);
+    return { books: [] };
   }
 
   async getBook(id) {
-    return this.request(`/books/${id}`);
+    return { book: null };
   }
 
   async getFeaturedBooks(type) {
-    return this.request(`/books/featured/${type}`);
+    return { books: [] };
   }
 
-  // Cart API
+  // Cart API - use localStorage
   async getCart() {
-    return this.request('/cart');
+    const cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    return { cart: { items: cart } };
   }
 
   async addToCart(bookId, quantity = 1) {
-    return this.request('/cart/add', {
-      method: 'POST',
-      body: JSON.stringify({ bookId, quantity })
-    });
+    let cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    const existing = cart.find(item => item.id === bookId);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      cart.push({ id: bookId, quantity });
+    }
+    localStorage.setItem('bookstore_cart', JSON.stringify(cart));
+    return { cart: { items: cart } };
   }
 
   async updateCartItem(bookId, quantity) {
-    return this.request('/cart/update', {
-      method: 'PUT',
-      body: JSON.stringify({ bookId, quantity })
-    });
+    let cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    const item = cart.find(item => item.id === bookId);
+    if (item) {
+      item.quantity = quantity;
+      localStorage.setItem('bookstore_cart', JSON.stringify(cart));
+    }
+    return { cart: { items: cart } };
   }
 
   async removeFromCart(bookId) {
-    return this.request('/cart/remove', {
-      method: 'DELETE',
-      body: JSON.stringify({ bookId })
-    });
+    let cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    cart = cart.filter(item => item.id !== bookId);
+    localStorage.setItem('bookstore_cart', JSON.stringify(cart));
+    return { cart: { items: cart } };
   }
 
   async clearCart() {
-    return this.request('/cart/clear', {
-      method: 'DELETE'
-    });
+    localStorage.setItem('bookstore_cart', JSON.stringify([]));
+    return { cart: { items: [] } };
   }
 
   async getCartCount() {
-    return this.request('/cart/count');
+    const cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
   }
 
   async mergeGuestCart(guestItems) {
-    return this.request('/cart/merge', {
-      method: 'POST',
-      body: JSON.stringify({ guestItems })
+    let cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+    guestItems.forEach(guest => {
+      const existing = cart.find(item => item.id === guest.bookId);
+      if (existing) {
+        existing.quantity += guest.quantity;
+      } else {
+        cart.push({ id: guest.bookId, quantity: guest.quantity });
+      }
     });
+    localStorage.setItem('bookstore_cart', JSON.stringify(cart));
+    return { cart: { items: cart } };
   }
 
-  // Orders API
+  // Orders API - store in localStorage
   async createOrder(orderData) {
-    return this.request('/orders', {
-      method: 'POST',
-      body: JSON.stringify(orderData)
-    });
+    let orders = JSON.parse(localStorage.getItem('bookstore_orders')) || [];
+    const order = {
+      ...orderData,
+      items: JSON.parse(localStorage.getItem('bookstore_cart')) || [],
+      orderNumber: orders.length + 1,
+      createdAt: new Date().toISOString(),
+      status: 'placed',
+      statusDisplay: 'Placed',
+      pricing: {
+        total: orderData.total || 0
+      }
+    };
+    orders.push(order);
+    localStorage.setItem('bookstore_orders', JSON.stringify(orders));
+    localStorage.setItem('bookstore_cart', JSON.stringify([]));
+    return { order };
   }
 
   async getOrders(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/orders?${queryString}`);
+    const orders = JSON.parse(localStorage.getItem('bookstore_orders')) || [];
+    return { orders };
   }
 
   async getOrder(id) {
-    return this.request(`/orders/${id}`);
+    const orders = JSON.parse(localStorage.getItem('bookstore_orders')) || [];
+    const order = orders.find(o => o.orderNumber === id);
+    return { order };
   }
 
   async cancelOrder(id, reason) {
-    return this.request(`/orders/${id}/cancel`, {
-      method: 'PUT',
-      body: JSON.stringify({ reason })
-    });
+    let orders = JSON.parse(localStorage.getItem('bookstore_orders')) || [];
+    const order = orders.find(o => o.orderNumber === id);
+    if (order) {
+      order.status = 'cancelled';
+      order.statusDisplay = 'Cancelled';
+      order.cancelReason = reason;
+      localStorage.setItem('bookstore_orders', JSON.stringify(orders));
+    }
+    return { order };
   }
 
   async getOrderStats() {
-    return this.request('/orders/stats/summary');
+    const orders = JSON.parse(localStorage.getItem('bookstore_orders')) || [];
+    return { stats: { totalOrders: orders.length } };
   }
 
   // User API
   async getUserProfile() {
-    return this.request('/users/profile');
+    return this.getCurrentUser();
   }
 
   async updateUserProfile(profileData) {
-    return this.request('/users/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData)
-    });
+    return this.updateProfile(profileData);
   }
 
   async getUserOrders(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.request(`/users/orders?${queryString}`);
+    return this.getOrders(params);
   }
 
   async getUserDashboard() {
-    return this.request('/users/dashboard');
+    return {};
   }
 
   async deleteAccount(password) {
-    return this.request('/users/account', {
-      method: 'DELETE',
-      body: JSON.stringify({ password })
-    });
+    let user = JSON.parse(localStorage.getItem('bookstore_user'));
+    if (user && user.password === password) {
+      localStorage.removeItem('bookstore_user');
+      localStorage.removeItem('bookstore_orders');
+      localStorage.removeItem('bookstore_cart');
+      this.user = null;
+      return { success: true };
+    } else {
+      throw new Error('Incorrect password');
+    }
   }
 }
 
 // Create global API instance
 const api = new BookStoreAPI();
-
-// Export for use in other files
 window.BookStoreAPI = BookStoreAPI;
 window.api = api;
