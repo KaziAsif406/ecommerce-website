@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Books - MyBookStore</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header / Navbar -->
+    <header class="header">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-book"></i> MyBookStore</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="products.html" class="nav-link active">Categories</a>
+                <a href="cart.html" class="nav-link">
+                    <i class="fas fa-shopping-cart"></i> Cart 
+                    <span class="cart-count" id="cartCount">0</span>
+                </a>
+                <a href="login.html" class="nav-link">Login / Signup</a>
+            </nav>
+        </div>
+        <div class="search-bar">
+            <div class="container">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search by title or author...">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="products-layout">
+                <!-- Filter Sidebar -->
+                <aside class="filter-sidebar">
+                    <h3>Filter & Sort</h3>
+                    
+                    <!-- Categories Filter -->
+                    <div class="filter-group">
+                        <h4>Categories</h4>
+                        <div class="filter-options">
+                            <label><input type="checkbox" value="fiction" checked> Fiction</label>
+                            <label><input type="checkbox" value="non-fiction" checked> Non-Fiction</label>
+                            <label><input type="checkbox" value="academic" checked> Academic</label>
+                            <label><input type="checkbox" value="comics" checked> Comics</label>
+                            <label><input type="checkbox" value="children" checked> Children</label>
+                        </div>
+                    </div>
+
+                    <!-- Price Range -->
+                    <div class="filter-group">
+                        <h4>Price Range</h4>
+                        <div class="price-range">
+                            <input type="range" id="priceRange" min="0" max="100" value="100">
+                            <span id="priceValue">$0 - $100</span>
+                        </div>
+                    </div>
+
+                    <!-- Sort Options -->
+                    <div class="filter-group">
+                        <h4>Sort By</h4>
+                        <select id="sortSelect">
+                            <option value="newest">Newest First</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                            <option value="title">Title A-Z</option>
+                        </select>
+                    </div>
+
+                    <button id="clearFilters" class="btn btn-secondary">Clear Filters</button>
+                </aside>
+
+                <!-- Products Grid -->
+                <section class="products-section">
+                    <div class="products-header">
+                        <h2>All Books</h2>
+                        <div class="view-options">
+                            <button id="gridView" class="view-btn active"><i class="fas fa-th"></i></button>
+                            <button id="listView" class="view-btn"><i class="fas fa-list"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="books-grid" id="productsGrid">
+                        <!-- Books will be populated by JavaScript -->
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="prevPage" class="btn btn-secondary">Previous</button>
+                        <span id="pageInfo">Page 1 of 1</span>
+                        <button id="nextPage" class="btn btn-secondary">Next</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>MyBookStore</h3>
+                    <p>Your one-stop destination for all your reading needs.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="products.html">Books</a></li>
+                        <li><a href="cart.html">Cart</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Email: info@mybookstore.com</p>
+                    <p>Phone: (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MyBookStore. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
