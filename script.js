@@ -158,16 +158,10 @@ class BookStore {
         }
     }
 
-    // Book data - now fetches from API
-    async getBooks(params = {}) {
-        try {
-            const response = await api.getBooks(params);
-            return response.books;
-        } catch (error) {
-            console.error('Error fetching books:', error);
-            // Fallback to local data if API fails
-            return this.getLocalBooks();
-        }
+
+    // Book data - always use local data
+    getBooks(params = {}) {
+        return this.getLocalBooks();
     }
 
     getLocalBooks() {
@@ -325,25 +319,26 @@ class BookStore {
                 this.showNotification('Book added to cart!');
             } else {
                 // Use local storage for guest users
-                const books = await this.getBooks();
-                const book = books.find(b => b._id == bookId);
+                const books = this.getBooks();
+                const book = books.find(b => (b._id || b.id) == bookId);
                 if (!book) return;
 
-                const existingItem = this.cart.find(item => item._id == bookId);
-                
+                const itemId = book._id || book.id;
+                const existingItem = this.cart.find(item => (item._id || item.id) == itemId);
+
                 if (existingItem) {
                     existingItem.quantity += 1;
                 } else {
                     this.cart.push({
                         ...book,
-                        quantity: 1
+                        quantity: 1,
+                        id: itemId // always set id for cart items
                     });
                 }
 
                 this.saveLocalData();
                 this.showNotification(`${book.title} added to cart!`);
             }
-            
             this.updateCartDisplay();
         } catch (error) {
             this.showNotification(error.message, 'error');
@@ -356,10 +351,10 @@ class BookStore {
                 const response = await api.removeFromCart(bookId);
                 this.cart = response.cart.items;
             } else {
-                this.cart = this.cart.filter(item => item._id != bookId);
+                this.cart = this.cart.filter(item => (item._id || item.id) != bookId);
                 this.saveLocalData();
+                this.renderCartPage();
             }
-            
             this.updateCartDisplay();
         } catch (error) {
             this.showNotification(error.message, 'error');
@@ -368,13 +363,13 @@ class BookStore {
 
     async updateQuantity(bookId, change) {
         try {
-            const item = this.cart.find(item => item._id == bookId);
+            const item = this.cart.find(item => (item._id || item.id) == bookId);
             if (!item) return;
 
             const newQuantity = item.quantity + change;
-            
             if (newQuantity <= 0) {
                 await this.removeFromCart(bookId);
+                if (!this.currentUser) this.renderCartPage();
             } else {
                 if (this.currentUser) {
                     const response = await api.updateCartItem(bookId, newQuantity);
@@ -382,8 +377,8 @@ class BookStore {
                 } else {
                     item.quantity = newQuantity;
                     this.saveLocalData();
+                    this.renderCartPage();
                 }
-                
                 this.updateCartDisplay();
             }
         } catch (error) {
@@ -458,25 +453,11 @@ class BookStore {
     }
 
     async renderHomePage() {
-        try {
-            // Fetch featured books from API
-            const [newArrivals, bestsellers, discounted] = await Promise.all([
-                api.getFeaturedBooks('new'),
-                api.getFeaturedBooks('bestsellers'),
-                api.getFeaturedBooks('discounted')
-            ]);
-
-            this.renderFeaturedBooks('newArrivals', newArrivals.books);
-            this.renderFeaturedBooks('bestSellers', bestsellers.books);
-            this.renderFeaturedBooks('discountedBooks', discounted.books);
-        } catch (error) {
-            console.error('Error loading featured books:', error);
-            // Fallback to local data
-            const books = await this.getBooks();
-            this.renderFeaturedBooks('newArrivals', books.filter(book => book.isNew));
-            this.renderFeaturedBooks('bestSellers', books.filter(book => book.isBestseller));
-            this.renderFeaturedBooks('discountedBooks', books.filter(book => book.isDiscounted));
-        }
+        // Always use local data for featured books
+        const books = this.getBooks();
+        this.renderFeaturedBooks('newArrivals', books.filter(book => book.isNew));
+        this.renderFeaturedBooks('bestSellers', books.filter(book => book.isBestseller));
+        this.renderFeaturedBooks('discountedBooks', books.filter(book => book.isDiscounted));
     }
 
     renderFeaturedBooks(containerId, books) {
@@ -487,17 +468,11 @@ class BookStore {
     }
 
     async renderProductsPage() {
-        try {
-            const books = await this.getBooks();
-            const filteredBooks = this.getFilteredBooks(books);
-            const container = document.getElementById('productsGrid');
-            
-            if (container) {
-                container.innerHTML = filteredBooks.map(book => this.createBookCard(book)).join('');
-            }
-        } catch (error) {
-            console.error('Error loading products:', error);
-            this.showNotification('Error loading products', 'error');
+        const books = this.getBooks();
+        const filteredBooks = this.getFilteredBooks(books);
+        const container = document.getElementById('productsGrid');
+        if (container) {
+            container.innerHTML = filteredBooks.map(book => this.createBookCard(book)).join('');
         }
     }
 
@@ -558,78 +533,63 @@ class BookStore {
 
     // Book Details Page
     async viewBookDetails(bookId) {
-        try {
-            const books = await this.getBooks();
-            const book = books.find(b => (b._id || b.id) == bookId);
-            if (!book) return;
-
-            // Store book ID in URL for page refresh
-            const url = new URL(window.location);
-            url.searchParams.set('id', bookId);
-            window.history.pushState({}, '', url);
-            
-            // Navigate to book details page
-            window.location.href = `book-details.html?id=${bookId}`;
-        } catch (error) {
-            console.error('Error loading book details:', error);
-        }
+        const books = this.getBooks();
+        const book = books.find(b => (b._id || b.id) == bookId);
+        if (!book) return;
+        // Store book ID in URL for page refresh
+        const url = new URL(window.location);
+        url.searchParams.set('id', bookId);
+        window.history.pushState({}, '', url);
+        // Navigate to book details page
+        window.location.href = `book-details.html?id=${bookId}`;
     }
 
     async renderBookDetailsPage() {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const bookId = parseInt(urlParams.get('id'));
-            const books = await this.getBooks();
-            const book = books.find(b => (b._id || b.id) == bookId);
-            
-            if (!book) {
-                window.location.href = 'products.html';
-                return;
-            }
-
-            const container = document.getElementById('bookDetails');
-            if (!container) return;
-
-            const bookImage = this.getBookImage(book);
-            const rating = book.rating?.average || book.rating || 0;
-            const discountBadge = book.isDiscounted ? `<span class="discount-badge">${Math.round((1 - book.price / book.originalPrice) * 100)}% OFF</span>` : '';
-            const bookIdForCart = book._id || book.id;
-            
-            container.innerHTML = `
-                <div class="book-detail-cover">
-                    <img src="${bookImage}" alt="${book.title}" class="book-detail-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="book-detail-image-fallback" style="display:none; align-items:center; justify-content:center; height:400px; font-size:8rem; color:#8b4513;">📚</div>
-                    ${discountBadge}
-                </div>
-                <div class="book-detail-info">
-                    <h1>${book.title}</h1>
-                    <p class="book-detail-author">by ${book.author}</p>
-                    <div class="book-detail-rating">
-                        <div class="stars">${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}</div>
-                        <span class="rating-text">${rating}/5</span>
-                    </div>
-                    <div class="book-detail-price">
-                        ${book.isDiscounted ? `<span class="original-price">$${book.originalPrice}</span>` : ''}
-                        <span class="current-price">$${book.price}</span>
-                    </div>
-                    <div class="book-detail-description">
-                        <p>${book.description}</p>
-                    </div>
-                    <div class="book-detail-actions">
-                        <button class="btn btn-primary btn-large add-to-cart" data-book-id="${bookIdForCart}">
-                            <i class="fas fa-cart-plus"></i> Add to Cart
-                        </button>
-                        <a href="products.html" class="btn btn-secondary">Back to Shop</a>
-                    </div>
-                </div>
-            `;
-
-            // Update page title
-            const bookTitleEl = document.getElementById('bookTitle');
-            if (bookTitleEl) bookTitleEl.textContent = book.title;
-        } catch (error) {
-            console.error('Error rendering book details:', error);
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = parseInt(urlParams.get('id'));
+        const books = this.getBooks();
+        const book = books.find(b => (b._id || b.id) == bookId);
+        if (!book) {
+            window.location.href = 'products.html';
+            return;
         }
+        const container = document.getElementById('bookDetails');
+        if (!container) return;
+        const bookImage = this.getBookImage(book);
+        const rating = book.rating?.average || book.rating || 0;
+        const discountBadge = book.isDiscounted ? `<span class="discount-badge">${Math.round((1 - book.price / book.originalPrice) * 100)}% OFF</span>` : '';
+        const bookIdForCart = book._id || book.id;
+        container.innerHTML = `
+            <div class="book-detail-cover">
+                <img src="${bookImage}" alt="${book.title}" class="book-detail-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="book-detail-image-fallback" style="display:none; align-items:center; justify-content:center; height:400px; font-size:8rem; color:#8b4513;">📚</div>
+                ${discountBadge}
+            </div>
+            <div class="book-detail-info">
+                <h1>${book.title}</h1>
+                <p class="book-detail-author">by ${book.author}</p>
+                <div class="book-detail-rating">
+                    <div class="stars">${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}</div>
+                    <span class="rating-text">${rating}/5</span>
+                </div>
+                <div class="book-detail-price">
+                    ${book.isDiscounted ? `<span class="original-price">$${book.originalPrice}</span>` : ''}
+                    <span class="current-price">$${book.price}</span>
+                </div>
+                <div class="book-detail-description">
+                    <p>${book.description}</p>
+                </div>
+                <div class="book-detail-actions">
+                    <button class="btn btn-primary btn-large add-to-cart" data-book-id="${bookIdForCart}">
+                        <i class="fas fa-cart-plus"></i> Add to Cart
+                    </button>
+                    <a href="products.html" class="btn btn-secondary">Back to Shop</a>
+                </div>
+            </div>
+        `;
+        // Update page title
+        const bookTitleEl = document.getElementById('bookTitle');
+        if (bookTitleEl) bookTitleEl.textContent = book.title;
     }
 
     // Cart Page
@@ -867,35 +827,80 @@ class BookStore {
 
     async handleCheckout(e) {
         e.preventDefault();
-        
         if (this.cart.length === 0) {
             this.showNotification('Your cart is empty!', 'error');
             return;
         }
-
-        if (!this.currentUser) {
-            this.showNotification('Please login to place an order', 'error');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return;
-        }
-
+        // Validate required fields
         const formData = new FormData(e.target);
         const orderData = Object.fromEntries(formData);
-        
+        const requiredFields = ['fullName', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'paymentMethod'];
+        for (const field of requiredFields) {
+            if (!orderData[field] || orderData[field].trim() === '') {
+                this.showNotification('Please fill in all required fields', 'error');
+                return;
+            }
+        }
+        // If payment method is card, check card fields
+        if (orderData.paymentMethod === 'card') {
+            const cardFields = ['cardNumber', 'expiryDate', 'cvv'];
+            for (const field of cardFields) {
+                if (!orderData[field] || orderData[field].trim() === '') {
+                    this.showNotification('Please fill in all card details', 'error');
+                    return;
+                }
+            }
+        }
+        // Place order (simulate)
         try {
             const response = await api.createOrder(orderData);
             this.cart = [];
             this.updateCartDisplay();
-            
-            this.showNotification('Order placed successfully!');
-            setTimeout(() => {
-                window.location.href = 'orders.html';
-            }, 1500);
+            // Show confirmation popup with order details
+            this.showOrderConfirmation(response.order);
         } catch (error) {
             this.showNotification(error.message, 'error');
         }
+    }
+
+    showOrderConfirmation(order) {
+        // Calculate delivery date (3-7 days from now)
+        const deliveryDays = Math.floor(Math.random() * 5) + 3;
+        const deliveryDate = new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000);
+        const formattedDate = deliveryDate.toLocaleDateString();
+        // Build order summary
+        const itemsList = order.items.map(item => `<li>${item.title} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
+        const popup = document.createElement('div');
+        popup.className = 'order-confirm-popup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+            padding: 2rem 2.5rem;
+            z-index: 10001;
+            min-width: 320px;
+            max-width: 90vw;
+        `;
+        popup.innerHTML = `
+            <h2 style="color:#28a745; margin-bottom:1rem;">Order Confirmed!</h2>
+            <p>Thank you for your purchase.</p>
+            <div style="margin:1rem 0;">
+                <strong>Order ID:</strong> #${order.orderNumber}<br>
+                <strong>Total Price:</strong> $${order.pricing.total.toFixed(2)}<br>
+                <strong>Delivery Date:</strong> ${formattedDate}
+            </div>
+            <div style="margin-bottom:1rem;"><strong>Items:</strong><ul style="margin:0; padding-left:1.2em;">${itemsList}</ul></div>
+            <button style="background:#28a745; color:#fff; border:none; border-radius:5px; padding:0.5em 1.5em; font-size:1rem; cursor:pointer;" id="closeOrderPopup">Close</button>
+        `;
+        document.body.appendChild(popup);
+        document.getElementById('closeOrderPopup').onclick = () => {
+            popup.remove();
+            window.location.href = 'index.html';
+        };
     }
 
     togglePaymentMethod(method) {
