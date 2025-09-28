@@ -503,7 +503,7 @@ class BookStore {
 
     createBookCard(book) {
         const bookId = book._id || book.id;
-        const bookImage = book.images?.[0]?.url || book.image || '📚';
+        const bookImage = this.getBookImage(book);
         const rating = book.rating?.average || book.rating || 0;
         const discountBadge = book.isDiscounted ? `<span class="discount-badge">${Math.round((1 - book.price / book.originalPrice) * 100)}% OFF</span>` : '';
         const newBadge = book.isNew ? `<span class="new-badge">NEW</span>` : '';
@@ -512,7 +512,8 @@ class BookStore {
         return `
             <div class="book-card" onclick="bookStore.viewBookDetails('${bookId}')">
                 <div class="book-cover">
-                    <div class="book-image">${bookImage}</div>
+                    <img src="${bookImage}" alt="${book.title}" class="book-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="book-image-fallback" style="display:none; align-items:center; justify-content:center; height:100%; font-size:4rem; color:#8b4513;">📚</div>
                     ${discountBadge}
                     ${newBadge}
                     ${bestsellerBadge}
@@ -528,73 +529,107 @@ class BookStore {
                         ${book.isDiscounted ? `<span class="original-price">$${book.originalPrice}</span>` : ''}
                         <span class="current-price">$${book.price}</span>
                     </div>
-                    <button class="btn btn-primary add-to-cart" data-book-id="${bookId}">
+                    <button class="btn btn-primary add-to-cart" data-book-id="${bookId}" onclick="event.stopPropagation();">
                         <i class="fas fa-cart-plus"></i> Add to Cart
                     </button>
                 </div>
             </div>
         `;
+    }
+
+    getBookImage(book) {
+        // Use proper book cover images from placeholder services
+        const bookImages = {
+            1: 'https://covers.openlibrary.org/b/isbn/9780743273565-M.jpg', // The Great Gatsby
+            2: 'https://covers.openlibrary.org/b/isbn/9780061120084-M.jpg', // To Kill a Mockingbird
+            3: 'https://covers.openlibrary.org/b/isbn/9780451524935-M.jpg', // 1984
+            4: 'https://covers.openlibrary.org/b/isbn/9780062316097-M.jpg', // Sapiens
+            5: 'https://covers.openlibrary.org/b/isbn/9780735211292-M.jpg', // Atomic Habits
+            6: 'https://covers.openlibrary.org/b/isbn/9780857197689-M.jpg', // The Psychology of Money
+            7: 'https://covers.openlibrary.org/b/isbn/9780312183617-M.jpg', // Calculus Made Easy
+            8: 'https://covers.openlibrary.org/b/isbn/9781302906280-M.jpg', // Spider-Man
+            9: 'https://covers.openlibrary.org/b/isbn/9780747532699-M.jpg', // Harry Potter
+            10: 'https://covers.openlibrary.org/b/isbn/9780525559474-M.jpg' // The Midnight Library
+        };
+        
+        const bookId = book._id || book.id;
+        return bookImages[bookId] || `https://via.placeholder.com/300x400/8b4513/ffffff?text=${encodeURIComponent(book.title)}`;
     }
 
     // Book Details Page
-    viewBookDetails(bookId) {
-        const book = this.getBooks().find(b => b.id === bookId);
-        if (!book) return;
+    async viewBookDetails(bookId) {
+        try {
+            const books = await this.getBooks();
+            const book = books.find(b => (b._id || b.id) == bookId);
+            if (!book) return;
 
-        // Store book ID in URL for page refresh
-        const url = new URL(window.location);
-        url.searchParams.set('id', bookId);
-        window.history.pushState({}, '', url);
-        
-        // Navigate to book details page
-        window.location.href = `book-details.html?id=${bookId}`;
+            // Store book ID in URL for page refresh
+            const url = new URL(window.location);
+            url.searchParams.set('id', bookId);
+            window.history.pushState({}, '', url);
+            
+            // Navigate to book details page
+            window.location.href = `book-details.html?id=${bookId}`;
+        } catch (error) {
+            console.error('Error loading book details:', error);
+        }
     }
 
-    renderBookDetailsPage() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const bookId = parseInt(urlParams.get('id'));
-        const book = this.getBooks().find(b => b.id === bookId);
-        
-        if (!book) {
-            window.location.href = 'products.html';
-            return;
+    async renderBookDetailsPage() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const bookId = parseInt(urlParams.get('id'));
+            const books = await this.getBooks();
+            const book = books.find(b => (b._id || b.id) == bookId);
+            
+            if (!book) {
+                window.location.href = 'products.html';
+                return;
+            }
+
+            const container = document.getElementById('bookDetails');
+            if (!container) return;
+
+            const bookImage = this.getBookImage(book);
+            const rating = book.rating?.average || book.rating || 0;
+            const discountBadge = book.isDiscounted ? `<span class="discount-badge">${Math.round((1 - book.price / book.originalPrice) * 100)}% OFF</span>` : '';
+            const bookIdForCart = book._id || book.id;
+            
+            container.innerHTML = `
+                <div class="book-detail-cover">
+                    <img src="${bookImage}" alt="${book.title}" class="book-detail-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="book-detail-image-fallback" style="display:none; align-items:center; justify-content:center; height:400px; font-size:8rem; color:#8b4513;">📚</div>
+                    ${discountBadge}
+                </div>
+                <div class="book-detail-info">
+                    <h1>${book.title}</h1>
+                    <p class="book-detail-author">by ${book.author}</p>
+                    <div class="book-detail-rating">
+                        <div class="stars">${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}</div>
+                        <span class="rating-text">${rating}/5</span>
+                    </div>
+                    <div class="book-detail-price">
+                        ${book.isDiscounted ? `<span class="original-price">$${book.originalPrice}</span>` : ''}
+                        <span class="current-price">$${book.price}</span>
+                    </div>
+                    <div class="book-detail-description">
+                        <p>${book.description}</p>
+                    </div>
+                    <div class="book-detail-actions">
+                        <button class="btn btn-primary btn-large add-to-cart" data-book-id="${bookIdForCart}">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                        </button>
+                        <a href="products.html" class="btn btn-secondary">Back to Shop</a>
+                    </div>
+                </div>
+            `;
+
+            // Update page title
+            const bookTitleEl = document.getElementById('bookTitle');
+            if (bookTitleEl) bookTitleEl.textContent = book.title;
+        } catch (error) {
+            console.error('Error rendering book details:', error);
         }
-
-        const container = document.getElementById('bookDetails');
-        if (!container) return;
-
-        const discountBadge = book.isDiscounted ? `<span class="discount-badge">${Math.round((1 - book.price / book.originalPrice) * 100)}% OFF</span>` : '';
-        
-        container.innerHTML = `
-            <div class="book-detail-cover">
-                <div class="book-detail-image">${book.image}</div>
-                ${discountBadge}
-            </div>
-            <div class="book-detail-info">
-                <h1>${book.title}</h1>
-                <p class="book-detail-author">by ${book.author}</p>
-                <div class="book-detail-rating">
-                    <div class="stars">${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}</div>
-                    <span class="rating-text">${book.rating}/5</span>
-                </div>
-                <div class="book-detail-price">
-                    ${book.isDiscounted ? `<span class="original-price">$${book.originalPrice}</span>` : ''}
-                    <span class="current-price">$${book.price}</span>
-                </div>
-                <div class="book-detail-description">
-                    <p>${book.description}</p>
-                </div>
-                <div class="book-detail-actions">
-                    <button class="btn btn-primary btn-large add-to-cart" data-book-id="${book.id}">
-                        <i class="fas fa-cart-plus"></i> Add to Cart
-                    </button>
-                    <a href="products.html" class="btn btn-secondary">Back to Shop</a>
-                </div>
-            </div>
-        `;
-
-        // Update page title
-        document.getElementById('bookTitle').textContent = book.title;
     }
 
     // Cart Page
@@ -612,42 +647,47 @@ class BookStore {
         if (emptyCart) emptyCart.style.display = 'none';
 
         if (cartItems) {
-            cartItems.innerHTML = this.cart.map(item => `
-                <div class="cart-item">
-                    <div class="cart-item-image">
-                        <div class="book-image">${item.image}</div>
-                    </div>
-                    <div class="cart-item-info">
-                        <div class="cart-item-title">${item.title}</div>
-                        <div class="cart-item-author">by ${item.author}</div>
-                        <div class="cart-item-price">$${item.price}</div>
-                    </div>
-                    <div class="cart-item-controls">
-                        <div class="quantity-controls">
-                            <button class="quantity-btn update-quantity" data-book-id="${item.id}" data-change="-1">-</button>
-                            <input type="number" class="quantity-input" value="${item.quantity}" min="1" 
-                                   onchange="bookStore.setQuantity(${item.id}, this.value)">
-                            <button class="quantity-btn update-quantity" data-book-id="${item.id}" data-change="1">+</button>
+            cartItems.innerHTML = this.cart.map(item => {
+                const itemId = item._id || item.id;
+                const itemImage = this.getBookImage(item);
+                return `
+                    <div class="cart-item">
+                        <div class="cart-item-image">
+                            <img src="${itemImage}" alt="${item.title}" class="book-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="book-image-fallback" style="display:none; align-items:center; justify-content:center; height:80px; width:60px; font-size:2rem; color:#8b4513;">📚</div>
                         </div>
-                        <button class="btn btn-danger remove-from-cart" data-book-id="${item.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="cart-item-info">
+                            <div class="cart-item-title">${item.title}</div>
+                            <div class="cart-item-author">by ${item.author}</div>
+                            <div class="cart-item-price">$${item.price}</div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <div class="quantity-controls">
+                                <button class="quantity-btn update-quantity" data-book-id="${itemId}" data-change="-1">-</button>
+                                <input type="number" class="quantity-input" value="${item.quantity}" min="1" 
+                                       onchange="bookStore.setQuantity(${itemId}, this.value)">
+                                <button class="quantity-btn update-quantity" data-book-id="${itemId}" data-change="1">+</button>
+                            </div>
+                            <button class="btn btn-danger remove-from-cart" data-book-id="${itemId}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         this.updateCartTotals();
     }
 
     setQuantity(bookId, quantity) {
-        const item = this.cart.find(item => item.id === bookId);
+        const item = this.cart.find(item => (item._id || item.id) == bookId);
         if (item) {
             item.quantity = parseInt(quantity);
             if (item.quantity <= 0) {
                 this.removeFromCart(bookId);
             } else {
-                this.saveData();
+                this.saveLocalData();
                 this.updateCartDisplay();
                 this.renderCartPage();
             }
@@ -672,18 +712,22 @@ class BookStore {
     renderCheckoutPage() {
         const orderItems = document.getElementById('orderItems');
         if (orderItems) {
-            orderItems.innerHTML = this.cart.map(item => `
-                <div class="order-item">
-                    <div class="order-item-image">
-                        <div class="book-image">${item.image}</div>
+            orderItems.innerHTML = this.cart.map(item => {
+                const itemImage = this.getBookImage(item);
+                return `
+                    <div class="order-item">
+                        <div class="order-item-image">
+                            <img src="${itemImage}" alt="${item.title}" class="book-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="book-image-fallback" style="display:none; align-items:center; justify-content:center; height:80px; width:60px; font-size:1.5rem; color:#8b4513;">📚</div>
+                        </div>
+                        <div class="order-item-info">
+                            <div class="order-item-title">${item.title}</div>
+                            <div class="order-item-quantity">Qty: ${item.quantity}</div>
+                        </div>
+                        <div class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
-                    <div class="order-item-info">
-                        <div class="order-item-title">${item.title}</div>
-                        <div class="order-item-quantity">Qty: ${item.quantity}</div>
-                    </div>
-                    <div class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         this.updateOrderTotals();
@@ -902,18 +946,22 @@ class BookStore {
                             <div class="order-status status-${order.status}">${order.statusDisplay}</div>
                         </div>
                         <div class="order-items">
-                            ${order.items.map(item => `
-                                <div class="order-item">
-                                    <div class="order-item-image">
-                                        <div class="book-image">${item.image || '📚'}</div>
+                            ${order.items.map(item => {
+                                const itemImage = this.getBookImage(item);
+                                return `
+                                    <div class="order-item">
+                                        <div class="order-item-image">
+                                            <img src="${itemImage}" alt="${item.title}" class="book-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <div class="book-image-fallback" style="display:none; align-items:center; justify-content:center; height:80px; width:60px; font-size:1.5rem; color:#8b4513;">📚</div>
+                                        </div>
+                                        <div class="order-item-info">
+                                            <div class="order-item-title">${item.title}</div>
+                                            <div class="order-item-quantity">Qty: ${item.quantity}</div>
+                                        </div>
+                                        <div class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</div>
                                     </div>
-                                    <div class="order-item-info">
-                                        <div class="order-item-title">${item.title}</div>
-                                        <div class="order-item-quantity">Qty: ${item.quantity}</div>
-                                    </div>
-                                    <div class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</div>
-                                </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
                         <div class="order-total">Total: $${order.pricing.total.toFixed(2)}</div>
                     </div>
