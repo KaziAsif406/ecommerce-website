@@ -6,6 +6,7 @@
     <title>MyBookStore - Your Online Bookstore</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Header / Navbar -->
@@ -36,27 +37,61 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <div class="hero-content">
-            <h2>Discover Your Next Great Read</h2>
-            <p>Explore thousands of books across all genres</p>
-            <a href="products.html" class="btn btn-primary">Shop Now</a>
+        <div class="hero-background">
+            <div class="book-pattern"></div>
+            <div class="reading-glasses"></div>
         </div>
-        <div class="hero-image">
-            <div class="book-stack">
-                <div class="book book-1"></div>
-                <div class="book book-2"></div>
-                <div class="book book-3"></div>
-                <div class="book book-4"></div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">Discover Your Next Great Read</h1>
+                <p class="hero-subtitle">Immerse yourself in worlds of wonder, knowledge, and adventure through our carefully curated collection of books</p>
+                <div class="hero-actions">
+                    <a href="products.html" class="btn btn-primary">
+                        <i class="fas fa-book-open"></i>
+                        Explore Books
+                    </a>
+                    <a href="#featured" class="btn btn-secondary">
+                        <i class="fas fa-star"></i>
+                        Featured Reads
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="elegant-book-stack">
+                <div class="book book-1">
+                    <div class="book-spine"></div>
+                    <div class="book-pages"></div>
+                </div>
+                <div class="book book-2">
+                    <div class="book-spine"></div>
+                    <div class="book-pages"></div>
+                </div>
+                <div class="book book-3">
+                    <div class="book-spine"></div>
+                    <div class="book-pages"></div>
+                </div>
+                <div class="book book-4">
+                    <div class="book-spine"></div>
+                    <div class="book-pages"></div>
+                </div>
+                <div class="bookmark"></div>
             </div>
         </div>
     </section>
 
     <!-- Featured Sections -->
-    <main class="main-content">
+    <main class="main-content" id="featured">
         <div class="container">
             <!-- New Arrivals -->
             <section class="featured-section">
-                <h2>New Arrivals</h2>
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-sparkles"></i>
+                        New Arrivals
+                    </h2>
+                    <p class="section-subtitle">Fresh titles just added to our collection</p>
+                </div>
                 <div class="books-grid" id="newArrivals">
                     <!-- Books will be populated by JavaScript -->
                 </div>
@@ -64,7 +99,13 @@
 
             <!-- Best Sellers -->
             <section class="featured-section">
-                <h2>Best Sellers</h2>
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-crown"></i>
+                        Best Sellers
+                    </h2>
+                    <p class="section-subtitle">Books that readers can't put down</p>
+                </div>
                 <div class="books-grid" id="bestSellers">
                     <!-- Books will be populated by JavaScript -->
                 </div>
@@ -72,7 +113,13 @@
 
             <!-- Discounted Books -->
             <section class="featured-section">
-                <h2>Special Offers</h2>
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-tags"></i>
+                        Special Offers
+                    </h2>
+                    <p class="section-subtitle">Limited-time deals on amazing reads</p>
+                </div>
                 <div class="books-grid" id="discountedBooks">
                     <!-- Books will be populated by JavaScript -->
                 </div>
