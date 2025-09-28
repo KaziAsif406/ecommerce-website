@@ -533,6 +533,18 @@ p {
     overflow: hidden;
 }
 
+.book-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.book-card:hover .book-image {
+    transform: scale(1.05);
+}
+
 .book-cover::before {
     content: '';
     position: absolute;
@@ -727,6 +739,14 @@ p {
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
 }
 
+.book-detail-image {
+    max-width: 100%;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
 .book-detail-info h1 {
     font-size: 2.5rem;
     color: #2c3e50;
@@ -792,6 +812,15 @@ p {
     justify-content: center;
     font-size: 2rem;
     color: #6c757d;
+    overflow: hidden;
+    position: relative;
+}
+
+.cart-item-image .book-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
 }
 
 .cart-item-info {
@@ -1031,6 +1060,15 @@ p {
     justify-content: center;
     font-size: 1.5rem;
     color: #6c757d;
+    overflow: hidden;
+    position: relative;
+}
+
+.order-item-image .book-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
 }
 
 .order-item-info {
