@@ -870,6 +870,13 @@ class BookStore {
         const formattedDate = deliveryDate.toLocaleDateString();
         // Build order summary
         const itemsList = order.items.map(item => `<li>${item.title} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}</li>`).join('');
+        // Calculate total price if missing or zero
+        let total = 0;
+        if (order.pricing && typeof order.pricing.total === 'number' && order.pricing.total > 0) {
+            total = order.pricing.total;
+        } else {
+            total = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        }
         const popup = document.createElement('div');
         popup.className = 'order-confirm-popup';
         popup.style.cssText = `
@@ -890,7 +897,7 @@ class BookStore {
             <p>Thank you for your purchase.</p>
             <div style="margin:1rem 0;">
                 <strong>Order ID:</strong> #${order.orderNumber}<br>
-                <strong>Total Price:</strong> $${order.pricing.total.toFixed(2)}<br>
+                <strong>Total Price:</strong> $${total.toFixed(2)}<br>
                 <strong>Delivery Date:</strong> ${formattedDate}
             </div>
             <div style="margin-bottom:1rem;"><strong>Items:</strong><ul style="margin:0; padding-left:1.2em;">${itemsList}</ul></div>
